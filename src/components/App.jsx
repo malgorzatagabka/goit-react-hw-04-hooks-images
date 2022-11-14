@@ -8,104 +8,85 @@ import Loader from './Loader/Loader';
 import Modal from './Modal/Modal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from 'react';
 
-const INITIAL_STATE = {
-  images: [],
-  error: '',
-  page: 1,
-  perPage: 12,
-  isLoading: false,
-  query: '',
-  totalHits: '',
-};
+const App = () => {
+  const [images, setImages] = useState([]);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [isLoading, setisLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [totalHits, settotalHits] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
-export default class App extends React.Component {
-  state = { ...INITIAL_STATE };
-
-  handleMakeRequest = e => {
+  const handleMakeRequest = e => {
     e.preventDefault();
     const searchValue = e.target.elements.searchValue.value;
-    this.setState({ images: [], query: searchValue, page: 1 });
-    e.target.reset();
+    setImages([]);
+    setPage(1);
+    setQuery(searchValue);
   };
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.page !== this.state.page ||
-      prevState.query !== this.state.query
-    ) {
-      this.setState({ isLoading: true });
-      try {
-        const { query, page } = this.state;
-        const fetchData = await getImages(query, page);
-        if (!fetchData.total) {
+  useEffect(() => {
+    if (query === '') {
+      return;
+    }
+    setError(false);
+    try {
+      getImages(query, page).then(response => {
+        if (!response.data.total) {
           toast.error("Sorry, there's no such images", {
             position: toast.POSITION.TOP_RIGHT,
           });
         }
-
-        this.setState(({ images }) => ({
-          images: [...images, ...fetchData.hits],
-          totalHits: fetchData.total,
-        }));
-      } catch (error) {
-        this.setState({ error });
-      } finally {
-        this.setState({ isLoading: false });
-      }
+        setImages(images => [...images, ...response.data.hits]);
+        settotalHits(response.data.total);
+        setisLoading(false);
+        console.log(response.data);
+      });
+    } catch (error) {
+      setError(error);
+    } finally {
+      setisLoading({ isLoading: false });
     }
-  }
+  }, [query, page]);
 
-  LoadMoreImages = () => {
-    this.setState(prevState => {
-      return { page: prevState.page + 1 };
+  const loadMoreImages = () => {
+    setPage(prevState => prevState + 1);
+  };
+
+  const showModalImage = id => {
+    const image = images.find(image => image.id === id);
+    setShowModal({
+      largeImageURL: image.largeImageURL,
+      tags: image.tags,
     });
   };
 
-  showModalImage = id => {
-    const image = this.state.images.find(image => image.id === id);
-    this.setState({
-      showModal: {
-        largeImageURL: image.largeImageURL,
-        tags: image.tags,
-      },
-    });
+  const closeModalImage = () => {
+    setShowModal(null);
   };
 
-  closeModalImage = () => {
-    this.setState({ showModal: null });
-  };
+  return (
+    <div className={style.App}>
+      <SearchBar handleMakeRequest={handleMakeRequest} />
+      {isLoading && <Loader />}
+      {images.length > 0 && (
+        <ImageGallery images={images} imageOnClick={showModalImage} />
+      )}
 
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleMakeRequest);
-  }
+      {totalHits > images.length && <Button handleMoreImage={loadMoreImages} />}
+      {isLoading && <Loader />}
+      {showModal && (
+        <Modal
+          modalImage={showModal.largeImageURL}
+          tags={showModal.tags}
+          closeModal={closeModalImage}
+        />
+      )}
+      <ToastContainer autoClose={1500} />
+    </div>
+  );
+};
 
-  render() {
-    const { images, isLoading, totalHits, showModal } = this.state;
-
-    return (
-      <div className={style.App}>
-        <SearchBar handleMakeRequest={this.handleMakeRequest} />
-        {isLoading && <Loader />}
-        {images.length > 0 && (
-          <ImageGallery images={images} imageOnClick={this.showModalImage} />
-        )}
-
-        {totalHits > images.length && (
-          <Button handleMoreImage={this.LoadMoreImages} />
-        )}
-        {isLoading && <Loader />}
-        {showModal && (
-          <Modal
-            modalImage={showModal.largeImageURL}
-            tags={showModal.tags}
-            closeModal={this.closeModalImage}
-          />
-        )}
-        <ToastContainer autoClose={1500} />
-      </div>
-    );
-  }
-}
-
-//Problem: po wpisaniu frazy, która nie zostanie wyszukana i po ponownym kliknięciu pojawia się strona z randomowymi obrazami i później po drugi  kliknięciu enter pojawia się botton loadMore- nie wiem w czym jest problem-prosze o sugestie..
+export default App;
