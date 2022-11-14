@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 
 const App = () => {
   const [images, setImages] = useState([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [isLoading, setisLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -45,7 +45,7 @@ const App = () => {
         console.log(response.data);
       });
     } catch (error) {
-      setError(error);
+      setError(true);
     } finally {
       setisLoading({ isLoading: false });
     }
