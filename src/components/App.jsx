@@ -42,7 +42,7 @@ const App = () => {
         setImages(images => [...images, ...response.data.hits]);
         settotalHits(response.data.total);
         setisLoading(false);
-        console.log(response.data);
+       
       });
     } catch (error) {
       setError(true);
@@ -76,6 +76,7 @@ const App = () => {
       )}
 
       {totalHits > images.length && <Button handleMoreImage={loadMoreImages} />}
+      {error}
       {isLoading && <Loader />}
       {showModal && (
         <Modal
